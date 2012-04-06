@@ -230,6 +230,7 @@ _report_closed(struct mread_pool * self) {
 
 int
 mread_poll(struct mread_pool * self , int timeout) {
+	self->skip = 0;
 	if (self->active >= 0) {
 		struct socket * s = &self->sockets[self->active];
 		if (s->status == SOCKET_READ) {
