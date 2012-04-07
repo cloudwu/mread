@@ -20,6 +20,7 @@ map_new(int max) {
 	while (sz <= max) {
 		sz *= 2;
 	}
+	sz *= 2;
 	struct map * m = malloc(sizeof(*m));
 	m->size = sz;
 	m->hash = malloc(sizeof(struct node) * sz);
@@ -66,13 +67,15 @@ map_insert(struct map * m, int fd, int id) {
 		}
 		n = &m->hash[n->next];
 	}
+	int last = (n - m->hash) * 2;
 	int i;
 	for (i=0;i<m->size;i++) {
-		struct node * temp = &m->hash[i];
+		int idx = (i + last + 1) & (m->size - 1);
+		struct node * temp = &m->hash[idx];
 		if (temp->fd < 0) {
 			temp->fd = fd;
 			temp->id = id;
-			n->next = i;
+			n->next = idx;
 			return;
 		}
 	}
