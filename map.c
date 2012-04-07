@@ -17,10 +17,10 @@ struct map {
 struct map * 
 map_new(int max) {
 	int sz = 1;
+	max = max * 3 / 2;
 	while (sz <= max) {
 		sz *= 2;
 	}
-	sz *= 2;
 	struct map * m = malloc(sizeof(*m));
 	m->size = sz;
 	m->hash = malloc(sizeof(struct node) * sz);
