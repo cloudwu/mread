@@ -62,6 +62,11 @@ map_insert(struct map * m, int fd, int id) {
 	}
 	while (n->next >=0 ) {
 		n = &m->hash[n->next];
+		if (n->fd < 0) {
+			n->fd = fd;
+			n->id = id;
+			return;
+		}
 	}
 	int i;
 	for (i=0;i<m->size;i++) {
