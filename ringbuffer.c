@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#define ALIGN(s) (((s) + 3 ) & ~3)
+
 struct ringbuffer {
 	int size;
 	int head;
@@ -24,7 +26,7 @@ block_ptr(struct ringbuffer * rb, int offset) {
 
 static inline struct ringbuffer_block *
 block_next(struct ringbuffer * rb, struct ringbuffer_block * blk) {
-	int align_length = (blk->length + 3) & ~3;
+	int align_length = ALIGN(blk->length);
 	int head = block_offset(rb, blk);
 	if (align_length + head == rb->size) {
 		return NULL;
@@ -61,7 +63,7 @@ ringbuffer_link(struct ringbuffer *rb , struct ringbuffer_block * head, struct r
 static struct ringbuffer_block *
 _alloc(struct ringbuffer * rb, int total_size , int size) {
 	struct ringbuffer_block * blk = block_ptr(rb, rb->head);
-	int align_length = sizeof(struct ringbuffer_block) + ((size + 3) & ~3);
+	int align_length = ALIGN(sizeof(struct ringbuffer_block) + size);
 	blk->length = sizeof(struct ringbuffer_block) + size;
 	blk->offset = 0;
 	blk->next = -1;
@@ -78,7 +80,7 @@ _alloc(struct ringbuffer * rb, int total_size , int size) {
 
 struct ringbuffer_block *
 ringbuffer_alloc(struct ringbuffer * rb, int size) {
-	int align_length = sizeof(struct ringbuffer_block) + ((size + 3) & ~3);
+	int align_length = ALIGN(sizeof(struct ringbuffer_block) + size);
 	int i;
 	for (i=0;i<2;i++) {
 		int free_size = 0;
@@ -127,8 +129,8 @@ ringbuffer_collect(struct ringbuffer * rb) {
 
 void
 ringbuffer_resize(struct ringbuffer * rb, struct ringbuffer_block * blk, int size) {
-	int align_length = sizeof(struct ringbuffer_block) + ((size + 3) & ~3);
-	int old_length = (blk->length + 3) & ~3;
+	int align_length = ALIGN(sizeof(struct ringbuffer_block) + size);
+	int old_length = ALIGN(blk->length);
 	assert(align_length < old_length);
 	blk->length = size + sizeof(struct ringbuffer_block);
 	if (align_length == old_length) {
