@@ -55,18 +55,16 @@ void
 map_insert(struct map * m, int fd, int id) {
 	int hash = fd & (m->size-1);
 	struct node * n = &m->hash[hash];
-	if (n->fd < 0) {
-		n->fd = fd;
-		n->id = id;
-		return;
-	}
-	while (n->next >=0 ) {
-		n = &m->hash[n->next];
+	for (;;) {
 		if (n->fd < 0) {
 			n->fd = fd;
 			n->id = id;
 			return;
 		}
+		if (n->next < 0 ) {
+			break;
+		}
+		n = &m->hash[n->next];
 	}
 	int i;
 	for (i=0;i<m->size;i++) {
