@@ -125,7 +125,7 @@ mread_create(int port , int max , int buffer_size) {
 	self->skip = 0;
 	self->sockets = _create_sockets(max);
 	self->free_socket = &self->sockets[0];
-	self->socket_hash = map_new(max);
+	self->socket_hash = map_new(max * 3 / 2);
 	self->queue_len = 0;
 	self->queue_head = 0;
 	if (buffer_size == 0) {

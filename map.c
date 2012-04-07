@@ -17,7 +17,6 @@ struct map {
 struct map * 
 map_new(int max) {
 	int sz = 1;
-	max = max * 3 / 2;
 	while (sz <= max) {
 		sz *= 2;
 	}
