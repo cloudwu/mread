@@ -387,10 +387,9 @@ mread_pull(struct mread_pool * self , int size) {
 			switch(errno) {
 			case EWOULDBLOCK:
 				return NULL;
+			case EINTR:
+				continue;
 			default:
-				if (errno == EAGAIN) {
-					continue;
-				}
 				_close_active(self);
 				return NULL;
 			}
