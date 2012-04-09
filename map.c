@@ -2,11 +2,12 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
 
 struct node {
 	int fd;
 	int id;
-	int next;
+	struct node * next;
 };
 
 struct map {
@@ -27,7 +28,7 @@ map_new(int max) {
 	for (i=0;i<sz;i++) {
 		m->hash[i].fd = -1;
 		m->hash[i].id = 0;
-		m->hash[i].next = -1;
+		m->hash[i].next = NULL;
 	}
 	return m;
 }
@@ -42,30 +43,40 @@ int
 map_search(struct map * m, int fd) {
 	int hash = fd & (m->size-1);
 	struct node * n = &m->hash[hash];
-	for(;;) {
+	do {
 		if (n->fd == fd)
 			return n->id;
-		if (n->next < 0)
-			return -1;
-		n = &m->hash[n->next];
-	}
+		n = n->next;
+	} while(n);
+	return -1;
 }
 
 void 
 map_insert(struct map * m, int fd, int id) {
 	int hash = fd & (m->size-1);
 	struct node * n = &m->hash[hash];
-	for (;;) {
-		if (n->fd < 0) {
-			n->fd = fd;
-			n->id = id;
-			return;
-		}
-		if (n->next < 0 ) {
-			break;
-		}
-		n = &m->hash[n->next];
+	if (n->fd < 0) {
+		n->fd = fd;
+		n->id = id;
+		return;
 	}
+	int ohash = n->fd & (m->size-1);
+	if (hash != ohash) {
+		struct node * last = &m->hash[ohash];
+		while (last->next != &m->hash[hash]) {
+			last = last->next;
+		}
+		last->next = n->next;
+
+		int ofd = n->fd;
+		int oid = n->id;
+		n->fd = fd;
+		n->id = id;
+		n->next = NULL;
+		map_insert(m,ofd, oid);
+		return;
+	}
+
 	int last = (n - m->hash) * 2;
 	int i;
 	for (i=0;i<m->size;i++) {
@@ -74,7 +85,8 @@ map_insert(struct map * m, int fd, int id) {
 		if (temp->fd < 0) {
 			temp->fd = fd;
 			temp->id = id;
-			n->next = idx;
+			temp->next = n->next;
+			n->next = temp;
 			return;
 		}
 	}
@@ -85,13 +97,43 @@ void
 map_erase(struct map *m , int fd) {
 	int hash = fd & (m->size-1);
 	struct node * n = &m->hash[hash];
-	for(;;) {
-		if (n->fd == fd) {
+	if (n->fd == fd) {
+		if (n->next == NULL) {
 			n->fd = -1;
 			return;
 		}
-		if (n->next < 0)
+		struct node * next = n->next;
+		n->fd = next->fd;
+		n->id = next->id;
+		n->next = next->next;
+		next->fd = -1;
+		next->next = NULL;
+		return;
+	}
+	if (n->next == NULL) {
+		return;
+	}
+	struct node * last = n;
+	n = n->next;
+	for(;;) {
+		if (n->fd == fd) {
+			n->fd = -1;
+			last->next = n->next;
+			n->next = NULL;
 			return;
-		n = &m->hash[n->next];
+		}
+		if (n->next == NULL)
+			return;
+		last = n;
+		n = n->next;
+	}
+}
+
+void
+map_dump(struct map *m) {
+	int i;
+	for (i=0;i<m->size;i++) {
+		struct node * n = &(m->hash[i]);
+		printf("[%d] fd = %d , id = %d , next = %d\n",i,n->fd,n->id,(n->next - m->hash));
 	}
 }

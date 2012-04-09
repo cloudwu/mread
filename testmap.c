@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#define MAX 1000
+#define MAX 2000
 
 static void
 test(struct map *m) {
@@ -12,13 +12,13 @@ test(struct map *m) {
 	int i;
 	int s = 0;
 	for (i=0;i<MAX*2;i++) {
-		int inc = random() % 3 + 1;
+		int inc = rand() % 3 + 1;
 		s += inc;
 		a[i] = s;
 	}
 	for (i=0;i<MAX * 2;i++) {
-		int x = random()%(MAX*2);
-		int y = random()%(MAX*2);
+		int x = rand()%(MAX*2);
+		int y = rand()%(MAX*2);
 		int temp = a[x];
 		a[x] = a[y];
 		a[y] = temp;
@@ -34,15 +34,12 @@ test(struct map *m) {
 		map_erase(m, a[i]);
 	}
 	for (i=0;i<MAX/2;i++) {
-		map_insert(m,a[i+MAX],i);
+		a[i] = a[i+MAX];
+		map_insert(m,a[i],i);
 	}
 	for (i=0;i<MAX;i++) {
-		int id = map_search(m,a[i+MAX/2]);
-		if (i>=MAX/2) {
-			assert(id == i - MAX/2);
-		} else {
-			assert(id == i + MAX/2);
-		}
+		int id = map_search(m,a[i]);
+		assert(id == i);
 	}
 }
 
