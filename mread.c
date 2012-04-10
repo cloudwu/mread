@@ -333,17 +333,16 @@ mread_pull(struct mread_pool * self , int size) {
 		self->skip += size;
 		return buffer;
 	}
-	if (s->status == SOCKET_CLOSED) {
-		ringbuffer_free(self->rb , s->node);
-		s->node = NULL;
-		return NULL;
-	}
-
-	if (s->status == SOCKET_READ) {
+	switch (s->status) {
+	case SOCKET_READ:
 		s->status = SOCKET_SUSPEND;
+	case SOCKET_CLOSED:
+	case SOCKET_SUSPEND:
 		return NULL;
+	default:
+		assert(s->status == SOCKET_POLLIN);
+		break;
 	}
-	assert(s->status == SOCKET_POLLIN);
 
 	int sz = size - rd_size;
 	int rd = READBLOCKSIZE;
@@ -379,16 +378,20 @@ mread_pull(struct mread_pool * self , int size) {
 			break;
 		}
 		if (bytes == 0) {
+			ringbuffer_resize(rb, blk, 0);
 			_close_active(self);
 			return NULL;
 		}
 		if (bytes == -1) {
 			switch(errno) {
 			case EWOULDBLOCK:
+				ringbuffer_resize(rb, blk, 0);
+				s->status = SOCKET_SUSPEND;
 				return NULL;
 			case EINTR:
 				continue;
 			default:
+				ringbuffer_resize(rb, blk, 0);
 				_close_active(self);
 				return NULL;
 			}
