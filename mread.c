@@ -25,6 +25,8 @@
 #define SOCKET_READ 3
 #define SOCKET_POLLIN 4
 
+#define SOCKET_ALIVE	SOCKET_SUSPEND
+
 struct socket {
 	int fd;
 	struct ringbuffer_block * node;
@@ -144,7 +146,7 @@ mread_close(struct mread_pool *self) {
 	int i;
 	struct socket * s = self->sockets;
 	for (i=0;i<self->max_connection;i++) {
-		if (s[i].status != SOCKET_INVALID) {
+		if (s[i].status >= SOCKET_ALIVE) {
 			close(s[i].fd);
 		}
 	}
