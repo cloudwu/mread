@@ -293,8 +293,6 @@ static void
 _close_client(struct mread_pool * self, int id) {
 	struct socket * s = &self->sockets[id];
 	s->status = SOCKET_CLOSED;
-	ringbuffer_free(self->rb, s->temp);
-	ringbuffer_free(self->rb, s->node);
 	s->node = NULL;
 	s->temp = NULL;
 	close(s->fd);
@@ -307,6 +305,9 @@ _close_client(struct mread_pool * self, int id) {
 static void
 _close_active(struct mread_pool * self) {
 	int id = self->active;
+	struct socket * s = &self->sockets[id];
+	ringbuffer_free(self->rb, s->temp);
+	ringbuffer_free(self->rb, s->node);
 	_close_client(self, id);
 }
 
