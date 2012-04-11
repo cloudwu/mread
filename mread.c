@@ -25,6 +25,8 @@
 #define SOCKET_READ 3
 #define SOCKET_POLLIN 4
 
+#define SOCKET_ALIVE	SOCKET_SUSPEND
+
 struct socket {
 	int fd;
 	struct ringbuffer_block * node;
@@ -144,7 +146,7 @@ mread_close(struct mread_pool *self) {
 	int i;
 	struct socket * s = self->sockets;
 	for (i=0;i<self->max_connection;i++) {
-		if (s[i].status != SOCKET_INVALID) {
+		if (s[i].status >= SOCKET_ALIVE) {
 			close(s[i].fd);
 		}
 	}
@@ -291,6 +293,8 @@ static void
 _close_client(struct mread_pool * self, int id) {
 	struct socket * s = &self->sockets[id];
 	s->status = SOCKET_CLOSED;
+	ringbuffer_free(self->rb, s->temp);
+	ringbuffer_free(self->rb, s->node);
 	s->node = NULL;
 	s->temp = NULL;
 	close(s->fd);
@@ -303,9 +307,6 @@ _close_client(struct mread_pool * self, int id) {
 static void
 _close_active(struct mread_pool * self) {
 	int id = self->active;
-	struct socket * s = &self->sockets[id];
-	ringbuffer_free(self->rb, s->temp);
-	ringbuffer_free(self->rb, s->node);
 	_close_client(self, id);
 }
 
@@ -334,17 +335,16 @@ mread_pull(struct mread_pool * self , int size) {
 		self->skip += size;
 		return buffer;
 	}
-	if (s->status == SOCKET_CLOSED) {
-		ringbuffer_free(self->rb , s->node);
-		s->node = NULL;
-		return NULL;
-	}
-
-	if (s->status == SOCKET_READ) {
+	switch (s->status) {
+	case SOCKET_READ:
 		s->status = SOCKET_SUSPEND;
+	case SOCKET_CLOSED:
+	case SOCKET_SUSPEND:
 		return NULL;
+	default:
+		assert(s->status == SOCKET_POLLIN);
+		break;
 	}
-	assert(s->status == SOCKET_POLLIN);
 
 	int sz = size - rd_size;
 	int rd = READBLOCKSIZE;
@@ -380,16 +380,20 @@ mread_pull(struct mread_pool * self , int size) {
 			break;
 		}
 		if (bytes == 0) {
+			ringbuffer_resize(rb, blk, 0);
 			_close_active(self);
 			return NULL;
 		}
 		if (bytes == -1) {
 			switch(errno) {
 			case EWOULDBLOCK:
+				ringbuffer_resize(rb, blk, 0);
+				s->status = SOCKET_SUSPEND;
 				return NULL;
 			case EINTR:
 				continue;
 			default:
+				ringbuffer_resize(rb, blk, 0);
 				_close_active(self);
 				return NULL;
 			}
@@ -406,6 +410,7 @@ mread_pull(struct mread_pool * self , int size) {
 	struct ringbuffer_block * temp = ringbuffer_alloc(rb, size);
 	while (temp == NULL) {
 		int collect_id = ringbuffer_collect(rb);
+		_close_client(self , collect_id);
 		if (id == collect_id) {
 			return NULL;
 		}
