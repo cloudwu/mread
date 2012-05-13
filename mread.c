@@ -13,6 +13,7 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 #define BACKLOG 32
 #define READQUEUE 32
@@ -80,12 +81,27 @@ _release_rb(struct ringbuffer * rb) {
 	ringbuffer_delete(rb);
 }
 
+static int
+_set_nonblocking(int fd)
+{
+    int flag = fcntl(fd, F_GETFL, 0);
+    if ( -1 == flag ) {
+        return -1;
+    }
+
+    return fcntl(fd, F_SETFL, flag | O_NONBLOCK);
+}
+
 struct mread_pool *
 mread_create(int port , int max , int buffer_size) {
-	int listen_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_fd == -1) {
 		return NULL;
 	}
+    if ( -1 == _set_nonblocking(listen_fd) ) {
+        return NULL;
+    }
+
 	int reuse = 1;
 	setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
 
