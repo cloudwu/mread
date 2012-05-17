@@ -134,6 +134,6 @@ map_dump(struct map *m) {
 	int i;
 	for (i=0;i<m->size;i++) {
 		struct node * n = &(m->hash[i]);
-		printf("[%d] fd = %d , id = %d , next = %ld\n",i,n->fd,n->id,(n->next - m->hash));
+		printf("[%d] fd = %d , id = %d , next = %d\n",i,n->fd,n->id,(int)(n->next - m->hash));
 	}
 }
