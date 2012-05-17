@@ -67,6 +67,7 @@ _alloc(struct ringbuffer * rb, int total_size , int size) {
 	blk->length = sizeof(struct ringbuffer_block) + size;
 	blk->offset = 0;
 	blk->next = -1;
+	blk->id = -1;
 	struct ringbuffer_block * next = block_next(rb, blk);
 	rb->head = block_offset(rb, next);
 	if (align_length < total_size) {
@@ -129,6 +130,10 @@ ringbuffer_collect(struct ringbuffer * rb) {
 
 void
 ringbuffer_resize(struct ringbuffer * rb, struct ringbuffer_block * blk, int size) {
+	if (size == 0) {
+		rb->head = block_offset(rb, blk);
+		return;
+	}
 	int align_length = ALIGN(sizeof(struct ringbuffer_block) + size);
 	int old_length = ALIGN(blk->length);
 	assert(align_length < old_length);

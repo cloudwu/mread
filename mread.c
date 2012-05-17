@@ -13,6 +13,7 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 #define BACKLOG 32
 #define READQUEUE 32
@@ -24,6 +25,8 @@
 #define SOCKET_SUSPEND 2
 #define SOCKET_READ 3
 #define SOCKET_POLLIN 4
+
+#define SOCKET_ALIVE	SOCKET_SUSPEND
 
 struct socket {
 	int fd;
@@ -78,12 +81,27 @@ _release_rb(struct ringbuffer * rb) {
 	ringbuffer_delete(rb);
 }
 
+static int
+_set_nonblocking(int fd)
+{
+    int flag = fcntl(fd, F_GETFL, 0);
+    if ( -1 == flag ) {
+        return -1;
+    }
+
+    return fcntl(fd, F_SETFL, flag | O_NONBLOCK);
+}
+
 struct mread_pool *
 mread_create(int port , int max , int buffer_size) {
-	int listen_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_fd == -1) {
 		return NULL;
 	}
+    if ( -1 == _set_nonblocking(listen_fd) ) {
+        return NULL;
+    }
+
 	int reuse = 1;
 	setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
 
@@ -144,7 +162,7 @@ mread_close(struct mread_pool *self) {
 	int i;
 	struct socket * s = self->sockets;
 	for (i=0;i<self->max_connection;i++) {
-		if (s[i].status != SOCKET_INVALID) {
+		if (s[i].status >= SOCKET_ALIVE) {
 			close(s[i].fd);
 		}
 	}
@@ -334,17 +352,16 @@ mread_pull(struct mread_pool * self , int size) {
 		self->skip += size;
 		return buffer;
 	}
-	if (s->status == SOCKET_CLOSED) {
-		ringbuffer_free(self->rb , s->node);
-		s->node = NULL;
-		return NULL;
-	}
-
-	if (s->status == SOCKET_READ) {
+	switch (s->status) {
+	case SOCKET_READ:
 		s->status = SOCKET_SUSPEND;
+	case SOCKET_CLOSED:
+	case SOCKET_SUSPEND:
 		return NULL;
+	default:
+		assert(s->status == SOCKET_POLLIN);
+		break;
 	}
-	assert(s->status == SOCKET_POLLIN);
 
 	int sz = size - rd_size;
 	int rd = READBLOCKSIZE;
@@ -380,16 +397,20 @@ mread_pull(struct mread_pool * self , int size) {
 			break;
 		}
 		if (bytes == 0) {
+			ringbuffer_resize(rb, blk, 0);
 			_close_active(self);
 			return NULL;
 		}
 		if (bytes == -1) {
 			switch(errno) {
 			case EWOULDBLOCK:
+				ringbuffer_resize(rb, blk, 0);
+				s->status = SOCKET_SUSPEND;
 				return NULL;
 			case EINTR:
 				continue;
 			default:
+				ringbuffer_resize(rb, blk, 0);
 				_close_active(self);
 				return NULL;
 			}
@@ -406,6 +427,7 @@ mread_pull(struct mread_pool * self , int size) {
 	struct ringbuffer_block * temp = ringbuffer_alloc(rb, size);
 	while (temp == NULL) {
 		int collect_id = ringbuffer_collect(rb);
+		_close_client(self , collect_id);
 		if (id == collect_id) {
 			return NULL;
 		}
