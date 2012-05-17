@@ -88,7 +88,7 @@ ringbuffer_alloc(struct ringbuffer * rb, int size) {
 		do {
 			if (blk->length >= sizeof(struct ringbuffer_block) && blk->id >= 0)
 				return NULL;
-			free_size += blk->length;
+			free_size += ALIGN(blk->length);
 			if (free_size >= align_length) {
 				return _alloc(rb, free_size , size);
 			}
@@ -210,7 +210,7 @@ ringbuffer_copy(struct ringbuffer * rb, struct ringbuffer_block * from, int skip
 				assert(from->offset == 0);
 				ptr += length;
 				size -= length;
-				length = from->length;
+				length = from->length - sizeof(struct ringbuffer_block);
 				src =  (char *)(from + 1);
 			}
 			memcpy(ptr, src , size);
@@ -254,7 +254,7 @@ ringbuffer_dump(struct ringbuffer * rb) {
 		if (i>10)
 			break;
 		if (blk->length >= sizeof(*blk)) {
-			printf("[%lu : %d]", blk->length - sizeof(*blk), block_offset(rb,blk));
+			printf("[%u : %d]", (unsigned)(blk->length - sizeof(*blk)), block_offset(rb,blk));
 			printf(" id=%d",blk->id);
 			if (blk->id >=0) {
 				printf(" offset=%d next=%d",blk->offset, blk->next);
