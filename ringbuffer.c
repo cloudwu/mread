@@ -190,7 +190,11 @@ ringbuffer_data(struct ringbuffer * rb, struct ringbuffer_block * blk, int size,
 			}
 			return ret;
 		}
-		assert(blk->next >= 0);
+		if (blk->next < 0) {
+			assert(length == skip);
+			*ptr = NULL;
+			return 0;
+		}
 		blk = block_ptr(rb, blk->next);
 		assert(blk->offset == 0);
 		skip -= length;
