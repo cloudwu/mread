@@ -305,8 +305,8 @@ _link_node(struct ringbuffer * rb, int id, struct socket * s , struct ringbuffer
 	}
 }
 
-static void
-_close_client(struct mread_pool * self, int id) {
+void
+mread_close_client(struct mread_pool * self, int id) {
 	struct socket * s = &self->sockets[id];
 	s->status = SOCKET_CLOSED;
 	s->node = NULL;
@@ -324,7 +324,7 @@ _close_active(struct mread_pool * self) {
 	struct socket * s = &self->sockets[id];
 	ringbuffer_free(self->rb, s->temp);
 	ringbuffer_free(self->rb, s->node);
-	_close_client(self, id);
+	mread_close_client(self, id);
 }
 
 static char *
@@ -375,7 +375,7 @@ mread_pull(struct mread_pool * self , int size) {
 	struct ringbuffer_block * blk = ringbuffer_alloc(rb , rd);
 	while (blk == NULL) {
 		int collect_id = ringbuffer_collect(rb);
-		_close_client(self , collect_id);
+		mread_close_client(self , collect_id);
 		if (id == collect_id) {
 			return NULL;
 		}
@@ -427,7 +427,7 @@ mread_pull(struct mread_pool * self , int size) {
 	struct ringbuffer_block * temp = ringbuffer_alloc(rb, size);
 	while (temp == NULL) {
 		int collect_id = ringbuffer_collect(rb);
-		_close_client(self , collect_id);
+		mread_close_client(self , collect_id);
 		if (id == collect_id) {
 			return NULL;
 		}
