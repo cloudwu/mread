@@ -60,7 +60,7 @@ struct mread_pool {
 #ifdef HAVE_EPOLL
 	int epoll_fd;
 #elif HAVE_KQUEUE
-    int kqueue_fd;
+	int kqueue_fd;
 #endif
 	int max_connection;
 	int closed;
@@ -73,7 +73,7 @@ struct mread_pool {
 #ifdef HAVE_EPOLL
 	struct epoll_event ev[READQUEUE];
 #elif HAVE_KQUEUE
-    struct kevent ev[READQUEUE];
+	struct kevent ev[READQUEUE];
 #endif
 	struct ringbuffer * rb;
 };
@@ -111,12 +111,12 @@ _release_rb(struct ringbuffer * rb) {
 static int
 _set_nonblocking(int fd)
 {
-    int flag = fcntl(fd, F_GETFL, 0);
-    if ( -1 == flag ) {
-        return -1;
-    }
+	int flag = fcntl(fd, F_GETFL, 0);
+	if ( -1 == flag ) {
+		return -1;
+	}
 
-    return fcntl(fd, F_SETFL, flag | O_NONBLOCK);
+	return fcntl(fd, F_SETFL, flag | O_NONBLOCK);
 }
 
 struct mread_pool *
@@ -164,19 +164,19 @@ mread_create(int port , int max , int buffer_size) {
 		return NULL;
 	}
 #elif HAVE_KQUEUE
-    int kqueue_fd = kqueue();
-    if (kqueue_fd == -1) {
-        close(listen_fd);
-        return NULL;
-    }
+	int kqueue_fd = kqueue();
+	if (kqueue_fd == -1) {
+		close(listen_fd);
+		return NULL;
+	}
 
-    struct kevent ke;
-    EV_SET(&ke, listen_fd, EVFILT_READ, EV_ADD, 0, 0, LISTENSOCKET);
-    if (kevent(kqueue_fd, &ke, 1, NULL, 0, NULL) == -1) {
-        close(listen_fd);
-        close(kqueue_fd);
-        return NULL;
-    }
+	struct kevent ke;
+	EV_SET(&ke, listen_fd, EVFILT_READ, EV_ADD, 0, 0, LISTENSOCKET);
+	if (kevent(kqueue_fd, &ke, 1, NULL, 0, NULL) == -1) {
+		close(listen_fd);
+		close(kqueue_fd);
+		return NULL;
+	}
 #endif
 
 	struct mread_pool * self = malloc(sizeof(*self));
@@ -185,7 +185,7 @@ mread_create(int port , int max , int buffer_size) {
 #ifdef HAVE_EPOLL
 	self->epoll_fd = epoll_fd;
 #elif HAVE_KQUEUE
-    self->kqueue_fd = kqueue_fd;
+	self->kqueue_fd = kqueue_fd;
 #endif
 	self->max_connection = max;
 	self->closed = 0;
@@ -222,7 +222,7 @@ mread_close(struct mread_pool *self) {
 #ifdef HAVE_EPOLL
 	close(self->epoll_fd);	
 #elif HAVE_KQUEUE
-    close(self->kqueue_fd);
+	close(self->kqueue_fd);
 #endif
 	_release_rb(self->rb);
 	free(self);
@@ -234,10 +234,10 @@ _read_queue(struct mread_pool * self, int timeout) {
 #ifdef HAVE_EPOLL
 	int n = epoll_wait(self->epoll_fd , self->ev, READQUEUE, timeout);
 #elif HAVE_KQUEUE
-    struct timespec timeoutspec;
-    timeoutspec.tv_sec = timeout;
-    timeoutspec.tv_nsec = 0;
-    int n = kevent(self->kqueue_fd, NULL, 0, self->ev, READQUEUE, &timeoutspec);
+	struct timespec timeoutspec;
+	timeoutspec.tv_sec = timeout;
+	timeoutspec.tv_nsec = 0;
+	int n = kevent(self->kqueue_fd, NULL, 0, self->ev, READQUEUE, &timeoutspec);
 #endif
 	if (n == -1) {
 		self->queue_len = 0;
@@ -290,12 +290,12 @@ _add_client(struct mread_pool * self, int fd) {
 		return;
 	}
 #elif HAVE_KQUEUE
-    struct kevent ke;
-    EV_SET(&ke, fd, EVFILT_READ, EV_ADD, 0, 0, s);
-    if (kevent(self->kqueue_fd, &ke, 1, NULL, 0, NULL) == -1) {
-        close(fd);
-        return;
-    } 
+	struct kevent ke;
+	EV_SET(&ke, fd, EVFILT_READ, EV_ADD, 0, 0, s);
+	if (kevent(self->kqueue_fd, &ke, 1, NULL, 0, NULL) == -1) {
+		close(fd);
+		return;
+	} 
 #endif
 
 	s->fd = fd;
@@ -385,9 +385,9 @@ mread_close_client(struct mread_pool * self, int id) {
 #ifdef HAVE_EPOLL
 	epoll_ctl(self->epoll_fd, EPOLL_CTL_DEL, s->fd , NULL);
 #elif HAVE_KQUEUE
-    struct kevent ke;
-    EV_SET(&ke, s->fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-    kevent(self->kqueue_fd, &ke, 1, NULL, 0, NULL);
+	struct kevent ke;
+	EV_SET(&ke, s->fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+	kevent(self->kqueue_fd, &ke, 1, NULL, 0, NULL);
 #endif
 
 	++self->closed;
