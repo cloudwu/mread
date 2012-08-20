@@ -21,7 +21,7 @@ void * mread_pull(struct mread_pool *m , int size);
 // Otherwise, you will get them again after next poll
 void mread_yield(struct mread_pool *m);
 
-// When the id is closed, it's return 1
+// When the id is closed, it returns 1
 int mread_closed(struct mread_pool *m);
 
 // Close id
