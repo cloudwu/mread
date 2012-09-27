@@ -462,7 +462,7 @@ mread_pull(struct mread_pool * self , int size) {
 	for (;;) {
 		int bytes = recv(s->fd, buffer, rd, MSG_DONTWAIT); 
 		if (bytes > 0) {
-			ringbuffer_resize(rb, blk , bytes);
+			ringbuffer_shrink(rb, blk , bytes);
 			if (bytes < sz) {
 				_link_node(rb, self->active, s , blk);
 				s->status = SOCKET_SUSPEND;
@@ -472,20 +472,20 @@ mread_pull(struct mread_pool * self , int size) {
 			break;
 		}
 		if (bytes == 0) {
-			ringbuffer_resize(rb, blk, 0);
+			ringbuffer_shrink(rb, blk, 0);
 			_close_active(self);
 			return NULL;
 		}
 		if (bytes == -1) {
 			switch(errno) {
 			case EWOULDBLOCK:
-				ringbuffer_resize(rb, blk, 0);
+				ringbuffer_shrink(rb, blk, 0);
 				s->status = SOCKET_SUSPEND;
 				return NULL;
 			case EINTR:
 				continue;
 			default:
-				ringbuffer_resize(rb, blk, 0);
+				ringbuffer_shrink(rb, blk, 0);
 				_close_active(self);
 				return NULL;
 			}

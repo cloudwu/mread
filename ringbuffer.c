@@ -133,7 +133,7 @@ ringbuffer_collect(struct ringbuffer * rb) {
 }
 
 void
-ringbuffer_resize(struct ringbuffer * rb, struct ringbuffer_block * blk, int size) {
+ringbuffer_shrink(struct ringbuffer * rb, struct ringbuffer_block * blk, int size) {
 	if (size == 0) {
 		rb->head = block_offset(rb, blk);
 		return;
