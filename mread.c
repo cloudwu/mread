@@ -220,7 +220,7 @@ mread_close(struct mread_pool *self) {
 		close(self->listen_fd);
 	}
 #ifdef HAVE_EPOLL
-	close(self->epoll_fd);	
+	close(self->epoll_fd);
 #elif HAVE_KQUEUE
 	close(self->kqueue_fd);
 #endif
@@ -295,7 +295,7 @@ _add_client(struct mread_pool * self, int fd) {
 	if (kevent(self->kqueue_fd, &ke, 1, NULL, 0, NULL) == -1) {
 		close(fd);
 		return;
-	} 
+	}
 #endif
 
 	s->fd = fd;
@@ -366,7 +366,7 @@ mread_socket(struct mread_pool * self, int index) {
 static void
 _link_node(struct ringbuffer * rb, int id, struct socket * s , struct ringbuffer_block * blk) {
 	if (s->node) {
-		ringbuffer_link(rb, s->node , blk);	
+		ringbuffer_link(rb, s->node , blk);
 	} else {
 		blk->id = id;
 		s->node = blk;
@@ -415,7 +415,7 @@ _ringbuffer_read(struct mread_pool * self, int *size) {
 	return ret;
 }
 
-void * 
+void *
 mread_pull(struct mread_pool * self , int size) {
 	if (self->active == -1) {
 		return NULL;
@@ -460,7 +460,7 @@ mread_pull(struct mread_pool * self , int size) {
 	buffer = (char *)(blk + 1);
 
 	for (;;) {
-		int bytes = recv(s->fd, buffer, rd, MSG_DONTWAIT); 
+		int bytes = recv(s->fd, buffer, rd, MSG_DONTWAIT);
 		if (bytes > 0) {
 			ringbuffer_shrink(rb, blk , bytes);
 			if (bytes < sz) {
@@ -520,7 +520,7 @@ mread_pull(struct mread_pool * self , int size) {
 	return ret;
 }
 
-void 
+void
 mread_yield(struct mread_pool * self) {
 	if (self->active == -1) {
 		return;
@@ -546,7 +546,7 @@ mread_yield(struct mread_pool * self) {
 	}
 }
 
-int 
+int
 mread_closed(struct mread_pool * self) {
 	if (self->active == -1) {
 		return 0;
